@@ -34,19 +34,29 @@ jobs:
       - name: Compute image tag
         id: meta
         run: |
+          # 在 push event 下 GITHUB_HEAD_REF 通常是空的，要用 GITHUB_REF
           BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
+
+          if [[ -z "$BRANCH_NAME" ]]; then
+            BRANCH_NAME="unknown-branch"
+          fi
 
           if [[ "$BRANCH_NAME" == release/* ]]; then
             VERSION="${BRANCH_NAME#release/}"
             IMAGE_TAG="release-${VERSION}"
           else
-            IMAGE_TAG="sha-${GITHUB_SHA::7}"
+            # 修正 substring 語法，取前 7 碼
+            IMAGE_TAG="sha-${GITHUB_SHA:0:7}"
+          fi
+
+          if [[ -z "$IMAGE_TAG" ]]; then
+            IMAGE_TAG="unknown-tag"
           fi
 
           echo "branch_name=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
           echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
 
-          # Debug output
+          # Debug 輸出
           echo "Branch name: $BRANCH_NAME"
           echo "Image tag: $IMAGE_TAG"
 
