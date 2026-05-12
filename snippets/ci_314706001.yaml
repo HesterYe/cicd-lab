@@ -50,6 +50,7 @@ jobs:
         run: docker build -t my-app:${{ steps.meta.outputs.image_tag }} .
 
       - name: Write summary
+        if: always()
         run: |
           echo "### 🐳 Docker Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "- Branch: ${{ steps.meta.outputs.branch_name }}" >> $GITHUB_STEP_SUMMARY
