@@ -84,7 +84,9 @@ jobs:
             OVERALL="❌ Failed"
             REASON="測試失敗"
             echo "### ✅ Test Errors (前 20 行)" >> $GITHUB_STEP_SUMMARY
-            head -n 20 test-results.log >> $GITHUB_STEP_SUMMARY
+            head -n 20 test-results.log | sed -r "s/\x1B
+
+          \[[0-9;]*[A-Za-z]//g" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "_完整 log 請查看 Actions Logs_" >> $GITHUB_STEP_SUMMARY
           fi
