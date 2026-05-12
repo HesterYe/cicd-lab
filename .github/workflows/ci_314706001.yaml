@@ -56,7 +56,7 @@ jobs:
           echo "branch_name=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
           echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
 
-          # Debug 輸出
+          # Debug output
           echo "Branch name: $BRANCH_NAME"
           echo "Image tag: $IMAGE_TAG"
 
@@ -66,7 +66,47 @@ jobs:
       - name: Write summary
         if: always()
         run: |
-          echo "### 🐳 Docker Build Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- Branch: ${{ steps.meta.outputs.branch_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Image tag: my-app:${{ steps.meta.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Run locally: \`docker run -it my-app:${{ steps.meta.outputs.image_tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "## CI Summary" >> $GITHUB_STEP_SUMMARY
+
+          # Pipeline result
+          OVERALL="Passed"
+          if [ -f prettier_status.txt ]; then
+            OVERALL="Failed"
+          fi
+          if grep -q "FAIL" test-results.log; then
+            OVERALL="Failed"
+          fi
+          echo "### Pipeline Result" >> $GITHUB_STEP_SUMMARY
+          echo "Overall: $OVERALL" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Prettier status
+          echo "### Prettier Check" >> $GITHUB_STEP_SUMMARY
+          if [ -f prettier_status.txt ]; then
+            echo "Result: Failed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Result: Passed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Testing result
+          echo "### Test Results" >> $GITHUB_STEP_SUMMARY
+          if grep -q "FAIL" test-results.log; then
+            FAILED=$(grep -c "FAIL" test-results.log || true)
+            PASSED=$(grep -c "PASS" test-results.log || true)
+            echo "Result: Failed ($FAILED failed, $PASSED passed)" >> $GITHUB_STEP_SUMMARY
+          else
+            PASSED=$(grep -c "PASS" test-results.log || true)
+            echo "Result: All tests passed ($PASSED total)" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Coverage
+          echo "### Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "Overall: ${{ steps.coverage.outputs.coverage }}" >> $GITHUB_STEP_SUMMARY
+
+          # Docker Build Summary
+          echo "### Docker Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "Branch: ${{ steps.meta.outputs.branch_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "Image tag: my-app:${{ steps.meta.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "Size: ${{ steps.docker-image-details.outputs.size }}" >> $GITHUB_STEP_SUMMARY
+          echo "Run locally: docker run -it my-app:${{ steps.meta.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+
