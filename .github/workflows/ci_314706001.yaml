@@ -35,8 +35,8 @@ jobs:
       - name: Run tests
         id: tests
         run: |
-          set -o pipefail
-          npm test -- --coverage | tee test-results.log
+          mkdir -p reports
+          npm test -- --reporter=default --reporter=junit --outputFile.junit=reports/vitest-junit.xml
 
       - name: Compute image tag
         id: meta
