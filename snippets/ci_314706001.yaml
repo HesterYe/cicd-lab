@@ -1,4 +1,4 @@
-name: ci_314706001   
+name: ci_314706001
 
 on:
   push:
@@ -28,7 +28,7 @@ jobs:
 
       - name: Prettier check
         id: prettier
-        run: npx prettier --write .
+        run: npx prettier --check .
 
       - name: Run tests
         id: tests
@@ -85,4 +85,3 @@ jobs:
           echo "Branch: ${{ steps.meta.outputs.branch_name }}" >> $GITHUB_STEP_SUMMARY
           echo "Image tag: my-app:${{ steps.meta.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
           echo "Run locally: docker run -it my-app:${{ steps.meta.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
-
