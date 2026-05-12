@@ -35,6 +35,7 @@ jobs:
       - name: Run tests
         id: tests
         run: |
+          set -o pipefail
           npm test -- --coverage | tee test-results.log
 
       - name: Coverage summary
