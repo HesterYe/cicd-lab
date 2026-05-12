@@ -109,4 +109,3 @@ jobs:
           echo "Branch: ${{ steps.meta.outputs.branch_name }}" >> $GITHUB_STEP_SUMMARY
           echo "Image tag: my-app:${{ steps.meta.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
           echo "Run locally: docker run -it my-app:${{ steps.meta.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
-
