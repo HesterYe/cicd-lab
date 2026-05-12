@@ -46,6 +46,10 @@ jobs:
           echo "branch_name=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
           echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
 
+          # Debug output
+          echo "Branch name: $BRANCH_NAME"
+          echo "Image tag: $IMAGE_TAG"
+
       - name: Build Docker image
         run: docker build -t my-app:${{ steps.meta.outputs.image_tag }} .
 
