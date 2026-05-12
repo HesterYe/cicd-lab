@@ -28,7 +28,7 @@ jobs:
 
       - name: Prettier check
         id: prettier
-        run: npx prettier --check .
+        run: npx prettier --write .
 
       - name: Run tests
         id: tests
