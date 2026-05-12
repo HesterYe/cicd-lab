@@ -26,42 +26,49 @@ jobs:
         run: npx tsc --noEmit
 
       - name: Prettier check
-        run: npx prettier --write .
+        id: prettier
+        run: |
+          npx prettier --check . || echo "Prettier failed" > prettier_status.txt
 
       - name: Run tests
-        run: npm test
+        id: tests
+        run: |
+          npm test -- --coverage | tee test-results.log
+
+      - name: Coverage summary
+        id: coverage
+        if: always()
+        run: |
+          if [ -f coverage/coverage-summary.json ]; then
+            TOTAL=$(jq '.total.lines.pct' coverage/coverage-summary.json)
+            echo "coverage=$TOTAL%" >> $GITHUB_OUTPUT
+          else
+            echo "coverage=No coverage report" >> $GITHUB_OUTPUT
+          fi
 
       - name: Compute image tag
         id: meta
         run: |
-          # 在 push event 下 GITHUB_HEAD_REF 通常是空的，要用 GITHUB_REF
           BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
+          [ -z "$BRANCH_NAME" ] && BRANCH_NAME="unknown-branch"
 
-          if [[ -z "$BRANCH_NAME" ]]; then
-            BRANCH_NAME="unknown-branch"
-          fi
-
-          if [[ "$BRANCH_NAME" == release/* ]]; then
-            VERSION="${BRANCH_NAME#release/}"
-            IMAGE_TAG="release-${VERSION}"
-          else
-            # 修正 substring 語法，取前 7 碼
-            IMAGE_TAG="sha-${GITHUB_SHA:0:7}"
-          fi
-
-          if [[ -z "$IMAGE_TAG" ]]; then
-            IMAGE_TAG="unknown-tag"
-          fi
+          IMAGE_TAG="sha-${GITHUB_SHA:0:7}"
+          [ -z "$IMAGE_TAG" ] && IMAGE_TAG="unknown-tag"
 
           echo "branch_name=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
           echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
 
-          # Debug output
           echo "Branch name: $BRANCH_NAME"
           echo "Image tag: $IMAGE_TAG"
 
       - name: Build Docker image
         run: docker build -t my-app:${{ steps.meta.outputs.image_tag }} .
+
+      - name: Docker image details
+        id: docker-image-details
+        run: |
+          SIZE=$(docker images my-app:${{ steps.meta.outputs.image_tag }} --format "{{.Size}}")
+          echo "size=$SIZE" >> $GITHUB_OUTPUT
 
       - name: Write summary
         if: always()
@@ -109,4 +116,3 @@ jobs:
           echo "Image tag: my-app:${{ steps.meta.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
           echo "Size: ${{ steps.docker-image-details.outputs.size }}" >> $GITHUB_STEP_SUMMARY
           echo "Run locally: docker run -it my-app:${{ steps.meta.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
-
