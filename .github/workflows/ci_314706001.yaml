@@ -38,17 +38,6 @@ jobs:
           set -o pipefail
           npm test -- --coverage | tee test-results.log
 
-      - name: Coverage summary
-        id: coverage
-        if: always()
-        run: |
-          if [ -f coverage/coverage-summary.json ]; then
-            TOTAL=$(jq '.total.lines.pct' coverage/coverage-summary.json)
-            echo "coverage=$TOTAL%" >> $GITHUB_OUTPUT
-          else
-            echo "coverage=No coverage report" >> $GITHUB_OUTPUT
-          fi
-
       - name: Compute image tag
         id: meta
         run: |
@@ -109,4 +98,3 @@ jobs:
           echo "Branch: ${{ steps.meta.outputs.branch_name }}" >> $GITHUB_STEP_SUMMARY
           echo "Image tag: my-app:${{ steps.meta.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
           echo "Run locally: docker run -it my-app:${{ steps.meta.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
-
