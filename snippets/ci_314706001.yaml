@@ -23,12 +23,14 @@ jobs:
         run: npm ci
 
       - name: TypeScript typecheck
-        run: npx tsc --noEmit
+        id: tsc
+        run: |
+          npx tsc --noEmit 2>&1 | tee tsc.log
 
       - name: Prettier check
         id: prettier
         run: |
-          npx prettier --check . || echo "Prettier failed" > prettier_status.txt
+          npx prettier --check . 2>&1 | tee prettier.log
 
       - name: Run tests
         id: tests
@@ -58,57 +60,51 @@ jobs:
           echo "branch_name=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
           echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
 
-          echo "Branch name: $BRANCH_NAME"
-          echo "Image tag: $IMAGE_TAG"
-
       - name: Build Docker image
         run: docker build -t my-app:${{ steps.meta.outputs.image_tag }} .
-
-      - name: Docker image details
-        id: docker-image-details
-        run: |
-          SIZE=$(docker images my-app:${{ steps.meta.outputs.image_tag }} --format "{{.Size}}")
-          echo "size=$SIZE" >> $GITHUB_OUTPUT
 
       - name: Write summary
         if: always()
         run: |
           echo "## 📊 CI Summary" >> $GITHUB_STEP_SUMMARY
 
-          # Pipeline result
           OVERALL="✅ Passed"
-          if [ -f prettier_status.txt ]; then
+          REASON=""
+
+          if [ "${{ steps.tsc.outcome }}" = "failure" ]; then
             OVERALL="❌ Failed"
+            REASON="TypeScript 型別檢查失敗"
+            echo "### 📝 TypeScript Errors (前 20 行)" >> $GITHUB_STEP_SUMMARY
+            head -n 20 tsc.log >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "_完整 log 請查看 Actions Logs_" >> $GITHUB_STEP_SUMMARY
           fi
-          if grep -q "FAIL" test-results.log; then
+
+          if [ "${{ steps.prettier.outcome }}" = "failure" ]; then
             OVERALL="❌ Failed"
+            REASON="Prettier 格式檢查失敗"
+            echo "### 🎨 Prettier Errors (前 20 行)" >> $GITHUB_STEP_SUMMARY
+            head -n 20 prettier.log >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "_完整 log 請查看 Actions Logs_" >> $GITHUB_STEP_SUMMARY
           fi
+
+          if [ "${{ steps.tests.outcome }}" = "failure" ]; then
+            OVERALL="❌ Failed"
+            REASON="測試失敗"
+            echo "### ✅ Test Errors (前 20 行)" >> $GITHUB_STEP_SUMMARY
+            head -n 20 test-results.log >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "_完整 log 請查看 Actions Logs_" >> $GITHUB_STEP_SUMMARY
+          fi
+
           echo "### 🚦 Pipeline Result" >> $GITHUB_STEP_SUMMARY
           echo "Overall: $OVERALL" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          # Prettier status
-          echo "### 🎨 Prettier Check" >> $GITHUB_STEP_SUMMARY
-          if [ -f prettier_status.txt ]; then
-            echo "Result: ❌ Failed" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "Result: ✅ Passed" >> $GITHUB_STEP_SUMMARY
+          if [ -n "$REASON" ]; then
+            echo "原因: $REASON" >> $GITHUB_STEP_SUMMARY
           fi
 
-          # Testing result
-          echo "### ✅ Test Results" >> $GITHUB_STEP_SUMMARY
-          if grep -q "FAIL" test-results.log; then
-            FAILED=$(grep -c "FAIL" test-results.log || true)
-            PASSED=$(grep -c "PASS" test-results.log || true)
-            echo "Result: ❌ Failed ($FAILED failed, $PASSED passed)" >> $GITHUB_STEP_SUMMARY
-          else
-            PASSED=$(grep -c "PASS" test-results.log || true)
-            echo "Result: ✅ All tests passed ($PASSED total)" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          # Docker Build Summary
           echo "### 🐳 Docker Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "Branch: ${{ steps.meta.outputs.branch_name }}" >> $GITHUB_STEP_SUMMARY
           echo "Image tag: my-app:${{ steps.meta.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
           echo "Run locally: docker run -it my-app:${{ steps.meta.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
-
